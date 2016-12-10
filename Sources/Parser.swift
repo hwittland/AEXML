@@ -34,13 +34,15 @@ internal class AEXMLParser: NSObject, XMLParserDelegate {
     
     var currentParent: AEXMLElement?
     var currentElement: AEXMLElement?
-    var currentValue = String()
+    
+    var currentValue = ""
     
     var parseError: Error?
     
     // MARK: - Lifecycle
     
     init(document: AEXMLDocument, data: Data) {
+        
         self.document = document
         self.data = data
         currentParent = document
@@ -51,6 +53,7 @@ internal class AEXMLParser: NSObject, XMLParserDelegate {
     // MARK: - API
     
     func parse() throws {
+        
         let parser = XMLParser(data: data)
         parser.delegate = self
         
@@ -64,6 +67,7 @@ internal class AEXMLParser: NSObject, XMLParserDelegate {
             guard let error = parseError else { throw AEXMLError.parsingFailed }
             throw error
         }
+        
     }
     
     // MARK: - XMLParserDelegate
@@ -72,30 +76,38 @@ internal class AEXMLParser: NSObject, XMLParserDelegate {
                       didStartElement elementName: String,
                       namespaceURI: String?,
                       qualifiedName qName: String?,
-                      attributes attributeDict: [String : String])
-    {
-        currentValue = String()
-        currentElement = currentParent?.addChild(name: elementName, attributes: attributeDict)
+                      attributes attributeDict: [String : String]) {
+        
+        currentValue = ""
+        currentElement = currentParent?.addChild(name: elementName, namespaceURI: namespaceURI, qualifiedName: qName, attributes: attributeDict)
         currentParent = currentElement
+        
     }
     
     @objc func parser(_ parser: XMLParser, foundCharacters string: String) {
+        
         currentValue += string
         let newValue = currentValue.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        currentElement?.value = newValue == String() ? nil : newValue
+        currentElement?.value = newValue.isEmpty ? nil : newValue
+        
     }
     
     @objc func parser(_ parser: XMLParser,
                       didEndElement elementName: String,
                       namespaceURI: String?,
-                      qualifiedName qName: String?)
-    {
+                      qualifiedName qName: String?) {
+        
         currentParent = currentParent?.parent
         currentElement = nil
+        
     }
     
     @objc func parser(_ parser: XMLParser, parseErrorOccurred parseError: Error) {
         self.parseError = parseError
     }
     
+    @objc func parser(_ parser: XMLParser, validationErrorOccurred validationError: Error) {
+        self.parseError = validationError
+    }
+
 }

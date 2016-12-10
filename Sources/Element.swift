@@ -30,7 +30,8 @@ import Foundation
     You can access its structure by using subscript like this: `element["foo"]["bar"]` which would
     return `<bar></bar>` element from `<element><foo><bar></bar></foo></element>` XML as an `AEXMLElement` object.
 */
-open class AEXMLElement {
+@objc(AEXMLElement)
+open class AEXMLElement : NSObject {
     
     // MARK: - Properties
     
@@ -43,6 +44,9 @@ open class AEXMLElement {
     /// XML Element name.
     open var name: String
     
+    open var namespaceURI: String?
+    open var qualifiedName: String?
+
     /// XML Element value.
     open var value: String?
     
@@ -53,13 +57,19 @@ open class AEXMLElement {
     open var error: AEXMLError?
     
     /// String representation of `value` property (if `value` is `nil` this is empty String).
-    open var string: String { return value ?? String() }
-    
+    open var string: String { return value ?? "" }
+        
     /// Boolean representation of `value` property (if `value` is "true" or 1 this is `True`, otherwise `False`).
     open var bool: Bool { return string.lowercased() == "true" || Int(string) == 1 ? true : false }
     
     /// Integer representation of `value` property (this is **0** if `value` can't be represented as Integer).
     open var int: Int { return Int(string) ?? 0 }
+    open var int16: Int16 { return Int16(self.int) }
+    open var uint16: UInt16 { return UInt16(self.int) }
+    open var int32: Int32 { return Int32(self.int) }
+    open var uint32: UInt32 { return UInt32(self.int) }
+    open var int64: Int64 { return Int64(self.int) }
+    open var uint64: UInt64 { return UInt64(self.int) }
     
     /// Double representation of `value` property (this is **0.00** if `value` can't be represented as Double).
     open var double: Double { return Double(string) ?? 0.00 }
@@ -75,50 +85,74 @@ open class AEXMLElement {
     
         - returns: An initialized `AEXMLElement` object.
     */
-    public init(name: String, value: String? = nil, attributes: [String : String] = [String : String]()) {
+    public init(name: String, value: String? = nil, namespaceURI: String? = nil, qualifiedName: String? = nil, attributes: [String : String] = [String : String]()) {
         self.name = name
         self.value = value
+        self.namespaceURI = namespaceURI
+        self.qualifiedName = qualifiedName
         self.attributes = attributes
     }
     
     // MARK: - XML Read
     
     /// The first element with given name **(Empty element with error if not exists)**.
-    open subscript(key: String) -> AEXMLElement {
-        guard let
-            first = children.filter({ $0.name == key }).first
-        else {
-            let errorElement = AEXMLElement(name: key)
-            errorElement.error = AEXMLError.elementNotFound
-            return errorElement
+    open subscript(key: String) -> AEXMLElement? {
+        if let document = self.document, document.options.subscriptingShouldFollowKeyPathNotation {
+            let path = key.components(separatedBy: ".")
+            return path.reduce(self) { (node, key) -> AEXMLElement? in return node?.first(withName: key) }
+        } else {
+            return first(withName: key)
         }
-        return first
+    }
+    
+    @nonobjc open subscript(path keyPath: String) -> AEXMLElement? {
+        let path = keyPath.components(separatedBy: ".")
+        return path.reduce(self) { (node, key) -> AEXMLElement? in return node?.first(withName: key) }
+    }
+    
+    open func first(withName: String) -> AEXMLElement? {
+        return children.first(where: { $0.name == withName} )
+//        if let f = children.first(where: { $0.name == withName} ) {
+//            return f
+//        } else {
+//            let errorElement = AEXMLElement(name: withName)
+//            errorElement.error = AEXMLError.elementNotFound
+//            return errorElement
+//        }
+    }
+    
+    open var document : AEXMLDocument? {
+        if self is AEXMLDocument {
+            return self as? AEXMLDocument
+        } else {
+            return parent?.document
+        }
     }
     
     /// Returns all of the elements with equal name as `self` **(nil if not exists)**.
-    open var all: [AEXMLElement]? { return parent?.children.filter { $0.name == self.name } }
+    open var all: [AEXMLElement] { return parent == nil ? [self] : parent!.children.filter { $0.name == self.name } }
     
     /// Returns the first element with equal name as `self` **(nil if not exists)**.
-    open var first: AEXMLElement? { return all?.first }
+    open var first: AEXMLElement { return parent == nil ? self : parent!.first(withName: self.name)! }
     
     /// Returns the last element with equal name as `self` **(nil if not exists)**.
-    open var last: AEXMLElement? { return all?.last }
+    open var last: AEXMLElement { return all.last! }
     
     /// Returns number of all elements with equal name as `self`.
-    open var count: Int { return all?.count ?? 0 }
+    open var count: Int { return all.count }
 
-    fileprivate func filter(withCondition condition: (AEXMLElement) -> Bool) -> [AEXMLElement]? {
-        guard let elements = all else { return nil }
-        
-        var found = [AEXMLElement]()
-        for element in elements {
-            if condition(element) {
-                found.append(element)
-            }
-        }
-        
-        return found.count > 0 ? found : nil
-    }
+//    fileprivate func filter(withCondition condition: (AEXMLElement) -> Bool) -> [AEXMLElement]? {
+//        guard let elements = all else { return nil }
+//        
+//        var found = [AEXMLElement]()
+//        for element in elements {
+//            if condition(element) {
+//                found.append(element)
+//            }
+//        }
+//        
+//        return found.count > 0 ? found : nil
+//    }
     
     /**
         Returns all elements with given value.
@@ -127,11 +161,8 @@ open class AEXMLElement {
         
         - returns: Optional Array of found XML elements.
     */
-    open func all(withValue value: String) -> [AEXMLElement]? {
-        let found = filter { (element) -> Bool in
-            return element.value == value
-        }
-        return found
+    open func all(withValue value: String) -> [AEXMLElement] {
+        return all.filter{ $0.value == value }
     }
     
     /**
@@ -141,8 +172,8 @@ open class AEXMLElement {
     
         - returns: Optional Array of found XML elements.
     */
-    open func all(withAttributes attributes: [String : String]) -> [AEXMLElement]? {
-        let found = filter { (element) -> Bool in
+    open func all(withAttributes attributes: [String : String]) -> [AEXMLElement] {
+        return all.filter { (element) -> Bool in
             var countAttributes = 0
             for (key, value) in attributes {
                 if element.attributes[key] == value {
@@ -151,7 +182,6 @@ open class AEXMLElement {
             }
             return countAttributes == attributes.count
         }
-        return found
     }
     
     // MARK: - XML Write
@@ -180,9 +210,11 @@ open class AEXMLElement {
     */
     @discardableResult open func addChild(name: String,
                        value: String? = nil,
+                       namespaceURI: String? = nil,
+                       qualifiedName: String? = nil,
                        attributes: [String : String] = [String : String]()) -> AEXMLElement
     {
-        let child = AEXMLElement(name: name, value: value, attributes: attributes)
+        let child = AEXMLElement(name: name, value: value, namespaceURI: namespaceURI, qualifiedName: qualifiedName, attributes: attributes)
         return addChild(child)
     }
     

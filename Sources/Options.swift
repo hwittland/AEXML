@@ -46,6 +46,8 @@ public struct AEXMLOptions {
     /// Settings used by `Foundation.XMLParser` (defaults to `ParserSettings()`)
     public var parserSettings = ParserSettings()
     
+    public var subscriptingShouldFollowKeyPathNotation = false
+    
     /// Designated initializer - Creates and returns default `AEXMLOptions`.
     public init() {}
     

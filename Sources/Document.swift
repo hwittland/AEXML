@@ -29,9 +29,10 @@ import Foundation
 
     XML Parsing is also done with this object.
 */
+@objc(AEXMLDocument)
 open class AEXMLDocument: AEXMLElement {
     
-    // MARK: - Properties
+    // MARK: - Properties    
     
     /// Root (the first child element) element of XML Document **(Empty element with error if not exists)**.
     open var root: AEXMLElement {
