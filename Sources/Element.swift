@@ -64,6 +64,8 @@ open class AEXMLElement : NSObject {
     
     /// Integer representation of `value` property (this is **0** if `value` can't be represented as Integer).
     open var int: Int { return Int(string) ?? 0 }
+    open var int8: Int8 { return Int8(self.int) }
+    open var uint8: UInt8 { return UInt8(self.int) }
     open var int16: Int16 { return Int16(self.int) }
     open var uint16: UInt16 { return UInt16(self.int) }
     open var int32: Int32 { return Int32(self.int) }
