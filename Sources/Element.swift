@@ -76,6 +76,15 @@ open class AEXMLElement : NSObject {
     /// Double representation of `value` property (this is **0.00** if `value` can't be represented as Double).
     open var double: Double { return Double(string) ?? 0.00 }
     
+    open var decimalNumber: NSDecimalNumber {
+        let us = NSLocale(localeIdentifier: "en_US")
+        if let value = self.value {
+            return NSDecimalNumber(string: value, locale: us)
+        } else {
+            return NSDecimalNumber(value: 0)
+        }
+    }
+    
     // MARK: - Lifecycle
     
     /**
