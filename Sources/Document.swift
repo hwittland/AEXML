@@ -44,7 +44,7 @@ open class AEXMLDocument: AEXMLElement {
         return rootElement
     }
     
-    open let options: AEXMLOptions
+    public let options: AEXMLOptions
     
     // MARK: - Lifecycle
     
